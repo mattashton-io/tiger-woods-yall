@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tiger Woods Fun Facts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Light mode variables - Golf Course */
+        .light {
+            --bg-color: #f4fce3; /* lime-0 */
+            --text-color: #2b8a3e; /* green-9 */
+            --btn-bg-color: #2f9e44; /* green-8 */
+            --btn-hover-bg-color: #37b24d; /* green-7 */
+            --btn-text-color: white;
+            --fact-bg-color: white;
+            --select-bg-color: white;
+            --select-border-color: #2f9e44;
+        }
+        /* Dark mode variables - Night Golf */
+        .dark {
+            --bg-color: #212529; /* gray-9 */
+            --text-color: #d3f9d8; /* green-1 */
+            --btn-bg-color: #2f9e44; /* green-8 */
+            --btn-hover-bg-color: #40c057; /* green-6 */
+            --btn-text-color: #212529; /* gray-9 */
+            --fact-bg-color: #343a40; /* gray-8 */
+            --select-bg-color: #343a40;
+            --select-border-color: #2f9e44;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        button#new-fact-button {
+            background-color: var(--btn-bg-color);
+            color: var(--btn-text-color);
+        }
+        button#new-fact-button:hover {
+            background-color: var(--btn-hover-bg-color);
+        }
+        .model-output {
+            background-color: var(--fact-bg-color);
+            color: var(--text-color);
+        }
+        select#model-select {
+            background-color: var(--select-bg-color);
+            color: var(--text-color);
+            border: 2px solid var(--select-border-color);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col items-center justify-start pt-10 transition-colors duration-500">
+    <div class="absolute top-4 right-4">
+        <button id="theme-toggle" class="p-2 rounded-full focus:outline-none">
+            <svg id="theme-toggle-dark-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+            <svg id="theme-toggle-light-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM10 18a1 1 0 01-1-1v-1a1 1 0 112 0v1a1 1 0 01-1 1zM5.05 14.464A1 1 0 106.465 13.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM1.005 10.995a1 1 0 011.414 0l.707-.707a1 1 0 111.414 1.414l-.707.707a1 1 0 01-1.414-1.414zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+        </button>
+    </div>
+    <div class="text-center w-full max-w-4xl px-4">
+        <h1 class="text-4xl font-bold mb-8">Tiger Woods Fun Facts</h1>
+        
+        <!-- Air Quality Section (Keeping as legacy but styled) -->
+        <div id="air-quality-container" class="mb-8 p-4 rounded-lg shadow-md inline-block transition-colors duration-500 hidden">
+            <h3 class="text-xl font-bold mb-2">San Diego Air Quality</h3>
+            <p id="air-quality-location" class="text-sm italic mb-2"></p>
+            <div id="air-quality-details" class="text-lg">
+                Loading air quality data...
+            </div>
+        </div>
+        <br>
+
+        <div class="mb-6">
+            <label for="model-select" class="block mb-2 font-bold text-lg">Select AI Model:</label>
+            <select id="model-select" class="p-2 rounded text-lg w-64 focus:outline-none transition-colors duration-500">
+                <option disabled selected>Loading models...</option>
+            </select>
+        </div>
+
+        <button id="new-fact-button" class="font-bold py-2 px-6 text-xl rounded transition-colors duration-500 mb-8">
+            Get Tiger Facts
+        </button>
+
+        <div class="w-full flex justify-center">
+            <div class="model-output p-6 rounded-lg shadow-md w-full max-w-2xl min-h-[150px] transition-colors duration-500">
+                <h2 id="model-title" class="text-2xl font-bold mb-4 border-b pb-2 border-gray-300">Result</h2>
+                <p id="fact-text" class="text-lg leading-relaxed"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+        const docElement = document.documentElement;
+
+        // Fetch Models and Air Quality on Load
+        window.addEventListener('load', function() {
+            // Fetch Models
+            fetch('/get_models')
+                .then(response => response.json())
+                .then(models => {
+                    const select = document.getElementById('model-select');
+                    select.innerHTML = ''; // Clear loading option
+                    if (models.error) {
+                         const option = document.createElement('option');
+                         option.textContent = "Error loading models";
+                         select.appendChild(option);
+                    } else {
+                        models.forEach(model => {
+                            const option = document.createElement('option');
+                            option.value = model;
+                            option.textContent = model;
+                            select.appendChild(option);
+                        });
+                        // Select first by default if available
+                        if(models.length > 0) select.value = models[0];
+                    }
+                })
+                .catch(err => console.error("Error loading models:", err));
+
+
+            const aqContainer = document.getElementById('air-quality-container');
+            const aqDetails = document.getElementById('air-quality-details');
+            const aqLocation = document.getElementById('air-quality-location');
+
+            // Show container
+            aqContainer.classList.remove('hidden');
+            aqContainer.classList.add('model-output'); // Use same styling as fact boxes
+
+            fetch('/get_air_quality')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        aqDetails.textContent = 'Error: ' + data.error;
+                    } else {
+                        // The structure from test.py is:
+                        // {
+                        //   "location": formatted_address,
+                        //   "coordinates": {"lat": lat, "lng": lng},
+                        //   "air_quality_data": weather_resp
+                        // }
+                        
+                        // Let's parse the air quality data. 
+                        // Note: The API response structure depends on Google's Air Quality API.
+                        // Typically it returns an index or indexes.
+                        
+                        aqLocation.textContent = data.location;
+                        
+                        let aqText = '';
+                        if (data.air_quality_data && data.air_quality_data.indexes) {
+                            data.air_quality_data.indexes.forEach(index => {
+                                aqText += `<div><strong>${index.displayName}:</strong> ${index.aqi} (${index.category})</div>`;
+                            });
+                        } else {
+                            aqText = 'No specific AQI data available.';
+                        }
+                        
+                        aqDetails.innerHTML = aqText;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching air quality:', error);
+                    aqDetails.textContent = 'Failed to load air quality data.';
+                });
+        });
+
+        // Check for saved theme preference or use system preference
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            docElement.classList.add('dark');
+            docElement.classList.remove('light');
+            lightIcon.classList.remove('hidden');
+        } else {
+            docElement.classList.add('light');
+            docElement.classList.remove('dark');
+            darkIcon.classList.remove('hidden');
+        }
+
+        themeToggleBtn.addEventListener('click', function() {
+            if (docElement.classList.contains('dark')) {
+                docElement.classList.remove('dark');
+                docElement.classList.add('light');
+                localStorage.setItem('theme', 'light');
+                darkIcon.classList.remove('hidden');
+                lightIcon.classList.add('hidden');
+            } else {
+                docElement.classList.remove('light');
+                docElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                lightIcon.classList.remove('hidden');
+                darkIcon.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('new-fact-button').addEventListener('click', function() {
+            const factText = document.getElementById('fact-text');
+            const modelSelect = document.getElementById('model-select');
+            const modelTitle = document.getElementById('model-title');
+            
+            const selectedModel = modelSelect.value;
+            if (!selectedModel) {
+                alert("Please select a model first.");
+                return;
+            }
+
+            modelTitle.textContent = selectedModel;
+            factText.textContent = 'Grabbing your fun fact from ' + selectedModel + '! This could take a while ...';
+
+            fetch(`/generate_fact?model=${encodeURIComponent(selectedModel)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.fact) {
+                        factText.innerHTML = data.fact.replace(/\n/g, '<br>');
+                    } else if (data.error) {
+                        factText.textContent = 'Error: ' + data.error;
+                    }
+                })
+                .catch(error => {
+                    factText.textContent = 'Failed to fetch fact. Please try again.';
+                    console.error('Error:', error);
+                });
+        });
+    </script>
+</body>
+</html>
